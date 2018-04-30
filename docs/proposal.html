@@ -1,0 +1,68 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Your Name  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">CS184 Final Project</h1>
+    <h2 align="middle">Proposal</h2>
+    	<h3 align="middle">GPU path tracer using NVIDIA OptiX</h3>
+<p align="middle">
+Our project will aim to implement a raytracer but backed by GPU power using NVIDIA OptiX. We plan to implement all the same features found in project 3-1 and 3-2 such as BVH, importance sampling, adaptive sampling, mirror glass and microfacet materials, and depth of field. Time permitting we will extend our raytracer to include difficult materials such as cloth.  
+</p>
+<p align="middle">
+Andrew Cui, 26032185<br/>
+Chris Mitchell, 26251801<br/>
+Raymond Ng, 25605575<br/>
+</p>
+
+<h3 align="middle"> Problem Description </h3>
+<p align="middle">
+Recent advances in GPU power have made a lot of applications of computer science faster. One of these is ray tracing and rendering in general. After impatiently waiting for project 3 images to render, we ask ourselves: how do we make this faster? We plan to port the whole project including the backend to use OptiX, which requires a deeper understanding of raytracing than required to complete the project. 
+</p>
+<h3 align="middle"> Goals and Deliverables </h3>
+<h5 align="middle"> Plan to Deliver </h5>
+<p align="middle">
+The images from Project 3-1 Part 3 along with Project 3-2 Parts 1, 2, & 4. <br>
+Timing data showing time to render scenes with and without GPU as the mesh complexity scales. 
+</p>
+<h5 align="middle"> Hope to Deliver </h5>
+<p align="middle">
+Timing showing GPU speedup with various effects and BSDF's. An image with a realistic cloth BSDF also sped up by our Optix ray tracer. Potentially even a set of starter code so that future versions of this class can use a GPU path tracer and people won't have to rely on hive machines. 
+</p>
+
+<h3 align="middle">  Schedule </h3>
+<p align="middle">
+Week1: Transfer backend to our best ability to OptiX, load dae/sky/CBspheres_lambertian.dae and produce the simplest Cornell box probably as a mesh.  <br>
+
+Week2: Get BVH working, global illumination. We should have all of Project 3-1 by now.  <br>
+
+Week3: Add mirror, glass, and microfacet materials. Implement depth of field.  <br>
+
+Week4: Timing experiments, writeup, cloth material time permitting.    <br>
+</p>
+
+<h3 align="middle">  Resources </h3>
+<p align="middle">
+The OptiX SDK comes with a set of examples. Nvidia also has a developer forum which is a good place to look. 
+</p>
+</body>
+</html>
+
+
+
+
+
+
