@@ -18,6 +18,122 @@
 <br />
 <h1 align="middle">CS184 Final Project</h1>
     <h2 align="middle">Update</h2>
+<p align="middle">
+<a href="https://www.youtube.com/watch?v=Piwzhv7C75s">Summary Video</a>
+</p>
+<p align="middle">
+<a href="https://docs.google.com/presentation/d/1hP-rxB6DjaWd4gU_POjydP60whq0AFh-D33DU6TgU-w/edit?usp=sharing">Summary Slides</a>
+</p>
+
+<p align="middle">
+Currently our GPU ray tracer supports the following.
+</p>
+<p align="middle">
+
+Diffuse surfaces<br>
+Mirror surfaces<br>
+Glass surfaces<br>
+
+Pinhole camera<br>
+Thin lens camera<br>
+
+Sphere primitives<br>
+Mesh primitives<br>
+
+Real time scene re-rendering<br>
+
+Importance sampling area light<br>
+
+BVH<br>
+Adaptive sampling<br>
+</ul>
+</p>
+<p align="middle">
+We worked heavily off of the nvidia optix tutorial optixPathTracer, which set up a basic rectangular cornell box with diffuse surfaces and already included adaptive sampling, re-rendering, simple global BVH, and a pinhole camera. We added mirror and glass surfaces, a thin lens camera, sphere and mesh primitives along with their respective BVH's. We also supported loading meshes, borrowing heavily from another optix tutorial. However, a lot of work was done to get meshes to support our surfaces, since the default texture for meshes is the blinn phong model. Some of the pictures we managed to render are shown below. 
+</p>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/basic.png" width="480px" />
+            <figcaption align="middle">Basic diffuse spheres cornell box. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/base.png" width="480px" />
+            <figcaption align="middle">Including mirror material. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/glass.png" width="480px" />
+            <figcaption align="middle">Including glass material. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/resolution.png"/>
+            <figcaption align="middle"> High resolution image which would not be possible using proj3-2. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/diffuse_bunny.png"/>
+            <figcaption align="middle"> Diffuse bunny mesh. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/diffuse_dragon.png"/>
+            <figcaption align="middle"> Diffuse dragon mesh. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/lens_close.png"/>
+            <figcaption align="middle"> Lens focused on closer sphere. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/lens_far.png"/>
+            <figcaption align="middle"> Lens focused on further sphere. </figcaption>
+        </tr>
+    </table>
+</div>
 
 </body>
 </html>
