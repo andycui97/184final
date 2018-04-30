@@ -1,0 +1,457 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Your Name  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Andrew Cui</h2>
+
+    <div class="padded">
+
+        <p>In this project we implemented many parts of the ray tracing pipeline for rendering images. The ideas behind this project are derived from physics, and allow us to render realistic images by simpling specifying the physical surface properties of various objects in the scene and some light sources. 
+        </p>
+
+        <p>In this writeup each part will be talked about in more detail. From a high level, though, part 1 set up the basics of ray tracing, part 2 greatly accelerated our work using BVH, part 3 set up a framework for thinking about ray bounces for direct illumination, which part 4 extended to include indirect illumination. Finally part 5 introduced adaptive sampling to once again speed up our rendering pipeline. 
+        </p>
+
+    <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
+        <p>In part 1 of this project, we focused on the geometry of shooting rays from the camera through the "image plane" for each pixel. We then focused on testing if these rays collided with triangles and spheres.</p>
+        <p>In task 1, we sample randomly in screen space for each pixel. These coordinates were then normalized and used to generate a ray from the camera to that sample location.  
+        </p>
+        <p>In the next task we turned the screen location of each ray into a camera space ray by scaling by the vertical FOV and horizontal FOV. This was then transformed to world space using a c2w transform. 
+        </p>
+        <p>Given this ray in world space information we needed to test if collided with objects. For triangles this was done with the Moller Trumbore algorithm. As long as t for the ray in the range t_min and t_max and b_1 and b_2 gave valid barycentric coordinates in that b_0 = 1-b_1-b_2 and all coordinates were between 0 and 1. For spheres, this was slightly easier as we simply solved a ray intersection quadratic and got t_1 and t_2. If they were both real and the closer of the two was in the range t_min and t_max we detected an intersection.</p>
+        <p> Focusing on the Moller Trumbore algorithm, it is derived from setting the ray equation to be that of a triangle in barycentric coordinates.</p>
+        <p align="middle"><pre align="middle">O+tD = (1-b_1-b_2)P_0 + b_1p_1 + b_2p_2</pre></p>
+        <p>This can be solved in many ways, but the algorithm specifically provides a fast and efficient calculation plan by first solving for 6 intermediate values</p>.
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p1-1.png" width="480px" />
+                    <figcaption align="middle">Empty scene. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p1-2.png" width="480px" />
+                    <figcaption align="middle">Spheres. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p1-3.png" width="480px" />
+                    <figcaption align="middle">Gems. </figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 2: Bounding Volume Hierarchy</h2>
+        <p>In part 2 of this project, we focused on speeding up our ray intersect algorithm using BVH. Our implementation of BVH was done so that the split was taken at the middle value along the longest dimension and the primitives sorted based on where their centroid lay in relation. If either side was empty, the bounding volume would split again along the same dimension, but with a new splitting value that is the middle value of the non-empty half until both halves are not non-empty. </p>
+        <p>Once the BVH is constructed, intersection tests are easy. If the node is a leaf, we simply test against all the primitives and return the closest intersection. Otherwise we check if we intersect the left and right child bounding boxes, and return the closest of the intersections within the two (found using a recursive call) if they exist. Testing against a bounding box is easy, as we intersect the 6 planes, which is fast, to get a range of valid t's for each of the 3 dimensions. If the intersection of these ranges is non-empty, the ray intersects the bounding box.</p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/2-1.png" width="480px" />
+                    <figcaption align="middle">Planck. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/2-2.png" width="480px" />
+                    <figcaption align="middle">Lucy. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <p>To test the speedup of using BVH, we renderd the cow before
+            <pre> 
+[PathTracer] Building BVH from 5856 primitives... Done! (0.0018 sec)
+[PathTracer] Rendering... 100%! (318.9174s)
+[PathTracer] BVH traced 478993 rays.
+[PathTracer] Averaged 3364.466591 intersection tests per ray.
+            </pre>
+                and after implementation
+            <pre>
+[PathTracer] Building BVH from 5856 primitives... Done! (0.0599 sec)
+[PathTracer] Rendering... 100%! (0.8973s)
+[PathTracer] BVH traced 463009 rays.
+[PathTracer] Averaged 3.155723 intersection tests per ray.
+            </pre>
+            As we can see, our average intersection test per ray has dropped by a factor of around 1000, and around a 350 times speedup in rendering time. This comes at a cost of increased time to build the BVH, but rendering some other objects proves this is not the case. 
+            <pre>
+            </p>
+max planck
+[PathTracer] Building BVH from 50801 primitives... Done! (0.4977 sec)
+[PathTracer] Rendering... 100%! (1.0952s)
+[PathTracer] BVH traced 459746 rays.
+[PathTracer] Averaged 4.073541 intersection tests per ray.
+
+lucy
+[PathTracer] Building BVH from 133796 primitives... Done! (1.5557 sec)
+[PathTracer] Rendering... 100%! (1.0368s)
+[PathTracer] BVH traced 465267 rays.
+[PathTracer] Averaged 2.507059 intersection tests per ray.
+
+dragon
+[PathTracer] Building BVH from 100012 primitives... Done! (1.2029 sec)
+[PathTracer] Rendering... 100%! (1.0236s)
+[PathTracer] BVH traced 461189 rays.
+[PathTracer] Averaged 3.025282 intersection tests per ray.
+
+coil
+[PathTracer] Building BVH from 7884 primitives... Done! (0.1560 sec)
+[PathTracer] Rendering... 100%! (0.6587s)
+[PathTracer] BVH traced 467229 rays.
+[PathTracer] Averaged 2.057978 intersection tests per ray.
+            </pre>
+            Our average intersection test per ray stays low, as does building the BVH, which takes on the order a couple of seconds as opposed to minutes required to render a much simpler mesh such as the cow. BVH also brings our rendering time down to the order of second even for large meshes with hundreds of thousands of primitives. 
+
+    <h2 align="middle">Part 3: Direct Illumination</h2>
+        <p>In part 3 of this project, we implemented shading objects based on how the light bounces off. Specifically, we focuse on direction illumination, which only considers one bounce off the object. For hemisphere illumination we simply pick a direction at random and check for an intersection along that path. We then add its contribution to irradiance by multiplying the incoming radiance by the surface BSDF, which is diffuse and scatters light uniformly, and a cosine angle. For importance sampling, we sample a direction towards a light and do the same steps. However, we have to divide by the pdf of picking a ray towards the light. The reason for this is that sampling towards the light biases our samples so we correct for that by dividing the result by the pdf. </p>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/CBbunny_64_32.png" width="480px" />
+                    <figcaption align="middle">Bunny using hemisphere sampling. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny_64_32.png" width="480px" />
+                    <figcaption align="middle">Bunny using importance sampling. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/CBsphere_64_32.png" width="480px" />
+                    <figcaption align="middle">Sphere using hemisphere sampling. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/sphere_64_32.png" width="480px" />
+                    <figcaption align="middle">Sphere using importance sampling. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/CBdragon_64_32.png" width="480px" />
+                    <figcaption align="middle">Dragon using hemisphere sampling. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/dragon_64_32.png" width="480px" />
+                    <figcaption align="middle">Dragon using importance sampling. </figcaption>
+                </tr>
+            </table>
+        </div>
+        Clearly importance sampling creates a less noisy image. This is easy to explain as many of our randomly sampled bounce rays may miss when using hemisphere sampling. This will cause the estimated irradiance at that point to be 0 since it will assume there is no incoming radiance. This is especially obvious on the dragon, which has a point light source, and does not even show up when using hemisphere sampling as the randomly shot rays have no chance of intersecting. 
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny_1_1.png" width="480px" />
+                    <figcaption align="middle">Bunny with 1 light ray. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny_1_4.png" width="480px" />
+                    <figcaption align="middle">Bunny with 4 light ray. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny_1_16.png" width="480px" />
+                    <figcaption align="middle">Bunny with 16 light ray. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny_1_64.png" width="480px" />
+                    <figcaption align="middle">Bunny with 64 light ray. </figcaption>
+                </tr>
+            </table>
+        </div>
+        As we can see, increasing the number of light rays sampled greatly decreases the noise. Focusing specifically on an area with soft shadows, such as the inside of the bunny's ears, we see that increasing the number of light rays sampled increases the smoothness of the shadow by a considerable amount.
+
+    <h2 align="middle">Part 4: Indirect Illumination</h2>
+        <p>Indirect illuminatino worked in very much the same way as direct illumination, but with additional tricks using russian roulette sampling. In the function at_least_one_bounce_radiance, the direct illumination was first calculated. Then, a coin was flipped and with probability p, we would shoot a ray off in a random direction sampled from our BSDF and add the at_least_one_bounce_radiance from that new intersection point. A couple of caveats: we had to divide the result by the probability p to unbias our sample, since sometimes we didn't recurse. Also, we always we always trace at least one indirect bounce, and never recurse if the ray's maximum depth is reached.  
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-1.png" width="480px" />
+                    <figcaption align="middle">Sphere direct illumination. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-5.png" width="480px" />
+                    <figcaption align="middle">Sphere with indirect illumination. </figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/direct.png" width="480px" />
+                    <figcaption align="middle">Sphere only direct illumination. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/indirect.png" width="480px" />
+                    <figcaption align="middle">Sphere only indirect illumination. </figcaption>
+                </tr>
+            </table>
+        </div>
+        This set of experiments is interesting as it shows the contribution of indirect illumination. Specifically, we can see that the bottom of the spheres and partrs of their shadows are lit up significantly by the additinoal bounces. Not only that, but the shadows and the sides of the sphere pick up some of the color of the adjacent walls due to the extra bounces. This phenomena also illuminates the ceiling, which is never only one bounce away from a light source. 
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-bunny-0.png" width="480px" />
+                    <figcaption align="middle">Bunny max depth 0. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-bunny-1.png" width="480px" />
+                    <figcaption align="middle">Bunny max depth 1. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-bunny-2.png" width="480px" />
+                    <figcaption align="middle">Bunny max depth 2. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-bunny-3.png" width="480px" />
+                    <figcaption align="middle">Bunny max depth 3. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-bunny-100.png" width="480px" />
+                    <figcaption align="middle">Bunny max depth 100. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <p>
+        Here we can see that a max depth of 3 already gives us most of the illumination in the scene, and that additional bounces provide diminishing returns (probably due the unlikeliness of a ray suriviving the russian roulette system for that many bounces). It also shows us that noise increases as we increase the number of bounces and this is to be expected as we introduce a few new dimensions of variance for each bounce since we need to pick a new bounce direction again. 
+        </p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-1_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 1 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-2_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 2 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-4_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 4 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-8_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 8 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-16_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 16 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-64_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 64 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/p4/p4-spheres-1024_4.png" width="480px" />
+                    <figcaption align="middle">Spheres 1024 sample per pixel. </figcaption>
+                </tr>
+            </table>
+        </div>
+        We can see that the more samples we take per pixel the better the quality. However, we still get speckles of noise at 64 samples per pixel, which was our sampling rate for all direct illumination images. In fact, we have to go up to 1024 samples per pixel, which took ages to complete, to smooth out the additional variance caused by the indirect bounces. However, the result is glorious
+        . 
+    <h2 align="middle">Part 5: Adaptive sampling</h2>
+        <p>Our adaptive sampling algorithm is extremely simple. We shoot out rays in batches and collect the sum of their illuminances as well as the sum of the square of their illuminances. After every batch, we calculate the mean and variance of all samples so far, and test to see if our 2 sigma confidence interval width is less than a max tolerance threshold fraction of the average illuminance. If not and we haven't hit the max number of samples, we sample another batch. This will focus on areas with higher variance to produce smoother results, while going relatively faster over areas with lower variance and fewer samples needed.  
+        </p>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny1.png" width="480px" />
+                    <figcaption align="middle">Adaptive sampled bunny. </figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/bunny1_rate.png" width="480px" />
+                    <figcaption align="middle">Bunny sample rate. </figcaption>
+                </tr>
+            </table>
+        </div>   
+</div>
+</body>
+</html>
+
+<!--
+Pre taking 15 minutes
+[PathTracer] Collecting primitives... Done! (0.0010 sec)
+[PathTracer] Building BVH from 5856 primitives... Done! (0.0018 sec)
+[PathTracer] Rendering... 100%! (318.9174s)
+[PathTracer] BVH traced 478993 rays.
+[PathTracer] Averaged 3364.466591 intersection tests per ray.
+
+
+Post, taking seconds
+[PathTracer] Collecting primitives... Done! (0.0009 sec)
+[PathTracer] Building BVH from 5856 primitives... Done! (0.0599 sec)
+[PathTracer] Rendering... 100%! (0.8973s)
+[PathTracer] BVH traced 463009 rays.
+[PathTracer] Averaged 3.155723 intersection tests per ray.
+
+max planck
+[PathTracer] Collecting primitives... Done! (0.0087 sec)
+[PathTracer] Building BVH from 50801 primitives... Done! (0.4977 sec)
+[PathTracer] Rendering... 100%! (1.0952s)
+[PathTracer] BVH traced 459746 rays.
+[PathTracer] Averaged 4.073541 intersection tests per ray.
+
+lucy
+[PathTracer] Collecting primitives... Done! (0.0271 sec)
+[PathTracer] Building BVH from 133796 primitives... Done! (1.5557 sec)
+[PathTracer] Rendering... 100%! (1.0368s)
+[PathTracer] BVH traced 465267 rays.
+[PathTracer] Averaged 2.507059 intersection tests per ray.
+
+dragon
+[PathTracer] Collecting primitives... Done! (0.0248 sec)
+[PathTracer] Building BVH from 100012 primitives... Done! (1.2029 sec)
+[PathTracer] Rendering... 100%! (1.0236s)
+[PathTracer] BVH traced 461189 rays.
+[PathTracer] Averaged 3.025282 intersection tests per ray.
+
+coil
+[PathTracer] Collecting primitives... Done! (0.0016 sec)
+[PathTracer] Building BVH from 7884 primitives... Done! (0.1560 sec)
+[PathTracer] Rendering... 100%! (0.6587s)
+[PathTracer] BVH traced 467229 rays.
+[PathTracer] Averaged 2.057978 intersection tests per ray.
+
+-->
+
+
+
+
