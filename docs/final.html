@@ -1,0 +1,218 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>GPU Ray Tracer  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">CS184 Final Project</h1>
+    <h2 align="middle">Final Report</h2>
+
+<p align="middle">
+<a href="https://youtube.com">Summary Video</a>
+</p>
+<p align="middle">
+<a href="https://docs.google.com/presentation/d/1hP-rxB6DjaWd4gU_POjydP60whq0AFh-D33DU6TgU-w/edit?usp=sharing">Final Slides</a>
+</p>
+
+
+<h3 align="middle"> Abstract </h3>
+
+<p align="middle">
+The main purpose of our project is to speed up ray tracing using GPU power. After experiencing frustratingly long render times for proj 3-2 we decided to implement everything in that project again, but leveraging the power of GPU's using NVIDIA Optix ray tracing framework. This required us to learn how Optix organizes its ray tracing functions, and dive into the intricacies of cuda programming. Specifically, we aimed to support a variety of features including diffuse/mirror/glass surfaces, pinhole/thin lens cameras, sphere/parallelogram/mesh primitives, BVH's, adaptive sampling, environment lights, and simple texture mappings. With the faster ray tracer, we are able to render the images of proj 3-2 very quickly and even render images that would simply not have been possible with proj 3-2. 
+</p>
+
+<h3 align="middle"> Technical Approach </h3>
+
+<p align="middle">
+We experienced many technical difficulties in implementing the various features we support. Diffuse surfaces were already given to us by way of a tutorial example, but we needed to modify it for mirror and glass surfaces and add new cuda programs to the main context. As it turns out, this modification was relatively simple as Optix provides functions to calculate reflected and refracted rays, although the documentation of these functions were sparse for some reason and required a lot of digging to find. A pinhole camera was also provided with the tutorial. However, we also implemented a thin lens camera by modifying the ray generation program. As with proj 3-2, we defined a lens radius and focal plane distance and shot a ray from a sampled position on the lens to the corresponding point of a pinhole ray at the focal depth. This section of the project took a lot of debugging as mistakes in the ray generation usually resulted in black or overly blurry pictures. A parallelogram primitive was provided with the tutorial, and we added sphere and mesh primitive support. The sphere primitive suffered from bugs initially due to floating point precision issues that left weird rings on the sphere, and this was resolved by taking a refined intersection program from a different tutorial. Meshes also provided problems, as loaded meshes using Optix functions defaulted to a blinn-phong texture which crashed without meaningful error due executing GPU code, and could only be fixed by first providing a bogus material, then setting it to the actual desired material later. Thankfully, BVH's and adaptive sampling were provided by the tutorial. Environment lights were implemented by modifying the miss program to sample from a texture, and was implemented with relative ease. Finally, we implemented simple texture mapping for spheres using similar techniques for enviroment lights by creating a new material. Overall, the project went relatively smoothly, with the only major stalls due to errors in the GPU code which were nearly impossible to debug or even search up. There was also some difficulty in getting Nvidia Optix set up correctly in the first place. This was expected, of course, but still frustrating to deal with. However, being able to set up complicated scenes and get high quality renders in seconds was extremely satisfying. 
+</p>
+<h3 align="middle"> Basic Renders (Possible with Proj 3-2) </h3>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/basic.png" width="480px" />
+            <figcaption align="middle">Basic diffuse spheres cornell box. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/base.png" width="480px" />
+            <figcaption align="middle">Including mirror material. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/glass.png" width="480px" />
+            <figcaption align="middle">Including glass material. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/resolution.png"/>
+            <figcaption align="middle"> High resolution image which would not be possible using proj3-2. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/diffuse_bunny.png"/>
+            <figcaption align="middle"> Diffuse bunny mesh. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/diffuse_dragon.png"/>
+            <figcaption align="middle"> Diffuse dragon mesh. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/lens_close.png"/>
+            <figcaption align="middle"> Lens focused on closer sphere. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/lens_far.png"/>
+            <figcaption align="middle"> Lens focused on further sphere. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/diffuse_dragon_rotate_1.png"/>
+            <img src="media/diffuse_dragon_rotate_2.png"/>
+            <figcaption align="middle"> Rotating our mesh forces recomputation, but reconverges relatively quickly. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/env_light_1.png"/>
+            <img src="media/env_light_2.png"/>
+            <figcaption align="middle"> Environment lights. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<h3 align="middle"> Advanced Renders (Not possible with Proj 3-2) </h3>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/jupiter.png"/>
+            <figcaption align="middle"> Simple texture map allows us to create a Jupiter sphere. </figcaption>
+        </tr>
+    </table>
+</div>
+
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/lambo.png"/>
+            <img src="media/lambo-zoom.png"/>
+            <figcaption align="middle"> Complex mesh with fine details like this golden mirror lambo would have taken a day, but requires about 5 seconds on a GPU. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/beach.png"/>
+            <figcaption align="middle"> Another complex scene inspired by light field cameras that is far too complex for project 3-2. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+            <img src="media/mirror.png"/>
+            <figcaption align="middle"> Mirrors galore, but this complex scene also takes around 5 seconds to converge. </figcaption>
+        </tr>
+    </table>
+</div>
+
+<h3 align="middle"> References </h3>
+<p align="middle">
+    NVIDIA Resources<br>
+    <a href=" http://raytracing-docs.nvidia.com/optix/tutorials/index.html"> Nvidia Tutorials </a><br>
+    <a href=" https://devtalk.nvidia.com"> Nvidia Dev Talk Forums </a><br>
+    Other helpful repos for comparing our implmentation or debugging<br>
+    <a href=" https://github.com/SammyNXS/Volvox_RT/"> https://github.com/SammyNXS/Volvox_RT/ </a><br>
+    <a href=" https://apartridge.github.io/OppositeRenderer/"> https://apartridge.github.io/OppositeRenderer/ </a><br>
+    <a href=" https://cs184.eecs.berkeley.edu/article/14/"> Proj 3-1 </a><br>
+    <a href=" https://cs184.eecs.berkeley.edu/article/22/"> Proj 3-2 </a><br>
+</p>
+
+<h3 align="middle"> Contributions from each team member </h3>
+
+<p align="middle">
+Andy: <br>
+Chris: <br>
+Raymond: <br>
+</p>
+
+
+
+
+
+</body>
+</html>
